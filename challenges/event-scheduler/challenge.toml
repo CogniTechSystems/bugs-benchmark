@@ -1,0 +1,60 @@
+title = "Event Scheduler"
+difficulty = "medium"
+language = "python"
+time_budget_seconds = 2700
+summary = "Recurring event generation and meeting conflict detection."
+
+[[bugs]]
+key = "daily-inclusive-end"
+title = "Daily recurrence excludes the end date"
+file = "scheduler/recurrence.py"
+points = 1
+tests = [
+  "tests/test_recurrence.py::test_daily_includes_end_date",
+  "tests/test_recurrence.py::test_daily_with_interval_landing_on_end_date",
+]
+original = '''
+    while current < end:
+'''
+replacement = '''
+    while current <= end:
+'''
+
+[[bugs]]
+key = "weekday-numbering"
+title = "Weekly recurrence uses ISO weekday numbers instead of Monday as zero"
+file = "scheduler/recurrence.py"
+points = 2
+tests = ["tests/test_recurrence.py::test_weekly_uses_monday_as_zero"]
+original = '''
+        if day.isoweekday() in weekdays:
+'''
+replacement = '''
+        if day.weekday() in weekdays:
+'''
+
+[[bugs]]
+key = "monthly-drift"
+title = "Monthly recurrence drifts after a short month"
+file = "scheduler/recurrence.py"
+points = 2
+tests = ["tests/test_recurrence.py::test_monthly_keeps_original_day_after_short_month"]
+original = '''
+        dates.append(add_months(dates[-1], 1))
+'''
+replacement = '''
+        dates.append(add_months(start, len(dates)))
+'''
+
+[[bugs]]
+key = "half-open-overlap"
+title = "Back-to-back slots are reported as overlapping"
+file = "scheduler/slots.py"
+points = 2
+tests = ["tests/test_slots.py::test_back_to_back_slots_do_not_conflict"]
+original = '''
+        return self.start <= other.end and other.start <= self.end
+'''
+replacement = '''
+        return self.start < other.end and other.start < self.end
+'''

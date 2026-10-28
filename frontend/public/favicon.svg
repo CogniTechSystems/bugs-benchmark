@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Bug Hunt Benchmark">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101820"/>
+      <stop offset="1" stop-color="#05080c"/>
+    </linearGradient>
+    <linearGradient id="frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef2f6"/>
+      <stop offset="0.5" stop-color="#9fb3c2"/>
+      <stop offset="1" stop-color="#28abe3"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6fd3f7"/>
+      <stop offset="1" stop-color="#1f8fc4"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="14" fill="url(#tile)" stroke="#1d2a36"/>
+  <path d="M13 24V14h10M51 24V14H41M13 40v10h10M51 40v10H41" fill="none" stroke="url(#frame)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32 18v-3M18 32h-3M49 32h-3M32 49v-3" stroke="#6fd3f7" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M25.5 27 22 24.5M25 32h-4M25.5 37 22 39.5M38.5 27 42 24.5M39 32h4M38.5 37 42 39.5M29.5 24.5 28 21.5M34.5 24.5 36 21.5" stroke="#dce8f0" stroke-width="1.6" stroke-linecap="round"/>
+  <rect x="25" y="23" width="14" height="18" rx="7" fill="url(#body)"/>
+  <path d="M32 24v16M26 32h12" stroke="#07131c" stroke-opacity="0.75" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

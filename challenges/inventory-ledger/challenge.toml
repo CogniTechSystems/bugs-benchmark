@@ -1,0 +1,47 @@
+title = "Inventory Ledger"
+difficulty = "easy"
+language = "python"
+time_budget_seconds = 1800
+summary = "A warehouse stock ledger with valuation, reorder alerts and pagination."
+
+[[bugs]]
+key = "total-value-operator"
+title = "Total value adds price and quantity instead of multiplying"
+file = "inventory/ledger.py"
+points = 1
+tests = ["tests/test_ledger.py::test_total_value_multiplies_price_by_quantity"]
+original = '''
+        return round(sum(item.unit_price + item.quantity for item in self.items.values()), 2)
+'''
+replacement = '''
+        return round(sum(item.unit_price * item.quantity for item in self.items.values()), 2)
+'''
+
+[[bugs]]
+key = "reorder-threshold"
+title = "Items exactly at their reorder level are not flagged"
+file = "inventory/ledger.py"
+points = 1
+tests = ["tests/test_ledger.py::test_items_to_reorder_includes_items_at_reorder_level"]
+original = '''
+        return sorted(sku for sku, item in self.items.items() if item.quantity < item.reorder_level)
+'''
+replacement = '''
+        return sorted(sku for sku, item in self.items.items() if item.quantity <= item.reorder_level)
+'''
+
+[[bugs]]
+key = "page-offset"
+title = "Pagination treats page numbers as zero-based"
+file = "inventory/ledger.py"
+points = 1
+tests = [
+  "tests/test_ledger.py::test_first_page_starts_with_first_item",
+  "tests/test_ledger.py::test_last_page_contains_remaining_items",
+]
+original = '''
+        start = number * size
+'''
+replacement = '''
+        start = (number - 1) * size
+'''

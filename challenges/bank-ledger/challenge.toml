@@ -1,0 +1,84 @@
+title = "Bank Ledger"
+difficulty = "hard"
+language = "python"
+time_budget_seconds = 3600
+summary = "Accounts, transfers, fees and interest using exact decimal money."
+
+[[bugs]]
+key = "rounding-mode"
+title = "Money rounding uses banker's rounding instead of rounding halves away from zero"
+file = "banking/money.py"
+points = 2
+tests = ["tests/test_banking.py::test_to_money_rounds_halves_away_from_zero"]
+original = '''
+        return Decimal(value).quantize(CENT)
+'''
+replacement = '''
+        return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
+'''
+
+[[bugs]]
+key = "shared-history"
+title = "Accounts created without a history share one mutable default list"
+file = "banking/accounts.py"
+points = 2
+tests = [
+  "tests/test_banking.py::test_new_accounts_do_not_share_history",
+  "tests/test_bank.py::test_open_account_applies_product_terms",
+  "tests/test_bank.py::test_close_account_requires_zero_balance",
+  "tests/test_bank.py::test_withdrawal_daily_limit",
+  "tests/test_bank.py::test_withdrawal_beyond_funds_is_audited",
+  "tests/test_bank.py::test_bank_transfer_moves_funds_and_audits",
+  "tests/test_bank.py::test_rejected_bank_transfer_is_audited",
+  "tests/test_bank.py::test_month_end_charges_fees_by_product",
+  "tests/test_bank.py::test_month_end_reports_interest_for_savings",
+  "tests/test_bank.py::test_scheduled_payment_runs_and_advances",
+  "tests/test_bank.py::test_weekly_payment_is_paid_once_per_run",
+  "tests/test_bank.py::test_failed_payment_is_retried_then_suspended",
+]
+original = '''
+        history: list[Transaction] = [],
+    ) -> None:
+        self.account_id = account_id
+        self.overdraft_limit = to_money(overdraft_limit)
+        self.history = history
+'''
+replacement = '''
+        history: list[Transaction] | None = None,
+    ) -> None:
+        self.account_id = account_id
+        self.overdraft_limit = to_money(overdraft_limit)
+        self.history = list(history) if history is not None else []
+'''
+
+[[bugs]]
+key = "interest-classification"
+title = "Interest is classified as a debit and reduces the balance"
+file = "banking/accounts.py"
+points = 3
+tests = ["tests/test_banking.py::test_interest_is_credited_to_the_balance"]
+original = '''
+CREDIT_KINDS = frozenset({"deposit", "transfer_in"})
+DEBIT_KINDS = frozenset({"withdrawal", "transfer_out", "fee", "interest"})
+'''
+replacement = '''
+CREDIT_KINDS = frozenset({"deposit", "transfer_in", "interest"})
+DEBIT_KINDS = frozenset({"withdrawal", "transfer_out", "fee"})
+'''
+
+[[bugs]]
+key = "transfer-atomicity"
+title = "A failed transfer still debits the source account"
+file = "banking/accounts.py"
+points = 3
+tests = ["tests/test_banking.py::test_failed_transfer_leaves_both_accounts_unchanged"]
+original = '''
+    source.record("transfer_out", value, reference)
+    if source.available() < 0:
+        raise InsufficientFundsError(f"Account {source.account_id} has insufficient funds")
+'''
+replacement = '''
+    if value > source.available():
+        raise InsufficientFundsError(f"Account {source.account_id} has insufficient funds")
+    source.record("transfer_out", value, reference)
+'''

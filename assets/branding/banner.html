@@ -1,0 +1,352 @@
+<!doctype html>
+<!--
+  Bug Hunt Benchmark banner: a chrome scanner emblem over a liquid metal surface, in the
+  CogniTech Systems hero style. Open it in a browser for the live animated banner. Query parameters:
+    w, h      canvas size in pixels (defaults to the window)
+    layout    "wide" (text left, emblem right), "compact" (one-line headline), "square"
+              or "mark" (emblem only)
+    left      left text inset in pixels, to keep clear of profile pictures on social headers
+    still     render a single frame at a fixed time, for screenshots
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bug Hunt Benchmark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500..800&family=Source+Sans+3:wght@400..600&display=block" rel="stylesheet">
+<style>
+  :root {
+    --background: #05080c;
+    --text: #f4f7fa;
+    --muted: #9fb1bf;
+    --faint: #5d7080;
+    --accent: #28abe3;
+    --accent-light: #6fd3f7;
+  }
+  html, body { margin: 0; height: 100%; background: var(--background); overflow: hidden; }
+  .banner { position: relative; width: 100vw; height: 100vh; color: var(--text);
+    font-family: "Source Sans 3", "Segoe UI", sans-serif; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .scrim { position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(0deg, rgba(5, 8, 12, .85) 0%, rgba(5, 8, 12, 0) 26%),
+      linear-gradient(90deg, rgba(5, 8, 12, .96) 0%, rgba(5, 8, 12, .82) 34%,
+        rgba(5, 8, 12, 0) 58%); }
+  .square .scrim { background:
+      linear-gradient(0deg, rgba(5, 8, 12, .97) 0%, rgba(5, 8, 12, .88) 34%,
+        rgba(5, 8, 12, 0) 56%),
+      linear-gradient(180deg, rgba(5, 8, 12, .7) 0%, rgba(5, 8, 12, 0) 16%); }
+  .copy { position: absolute; top: 50%; left: var(--left); transform: translateY(-50%);
+    max-width: 52%; }
+  .brand { font-family: "Archivo", sans-serif; font-weight: 600; letter-spacing: .32em;
+    font-size: calc(var(--unit) * 1.9); margin: 0 0 calc(var(--unit) * 4.2); }
+  .brand span { color: var(--accent); }
+  h1 { font-family: "Archivo", sans-serif; font-weight: 700; letter-spacing: -.035em;
+    line-height: 1.02; font-size: calc(var(--unit) * 7.4); margin: 0; }
+  .highlight { background: linear-gradient(100deg, var(--accent-light), var(--accent) 70%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .dot { color: var(--text); }
+  .lede { color: var(--muted); font-size: calc(var(--unit) * 2.15); line-height: 1.5;
+    margin: calc(var(--unit) * 3.4) 0 0; max-width: 30em; }
+  .footer { position: absolute; left: var(--left); right: var(--edge); bottom: var(--edge);
+    display: flex; justify-content: space-between; color: var(--faint);
+    font-size: calc(var(--unit) * 1.55); letter-spacing: .18em; text-transform: uppercase;
+    font-weight: 600; }
+  .compact h1 { font-size: calc(var(--unit) * 8.6); }
+  .compact .brand { font-size: calc(var(--unit) * 2.6); margin-bottom: calc(var(--unit) * 3.6); }
+  .compact .lede, .compact .footer { display: none; }
+  .square .copy { top: auto; bottom: var(--edge); transform: none; max-width: none;
+    right: var(--edge); }
+  .square h1 { font-size: calc(var(--unit) * 6.6); }
+  .square .lede { font-size: calc(var(--unit) * 2.1); }
+  .square .footer { top: var(--edge); bottom: auto; }
+  .mark .copy, .mark .footer, .mark .scrim { display: none; }
+</style>
+</head>
+<body>
+<div class="banner">
+  <canvas></canvas>
+  <div class="scrim"></div>
+  <div class="copy">
+    <p class="brand">BUG HUNT <span>BENCHMARK</span></p>
+    <h1 class="headline">Local models.<br>Hidden bugs.<br><span class="highlight">Verified fixes</span><span class="dot">.</span></h1>
+    <p class="lede">An open benchmark measuring how well locally hosted language models find
+      and fix bugs in realistic projects, verified by hidden tests.</p>
+  </div>
+  <div class="footer"><span>CogniTech Systems</span><span>Open source</span></div>
+</div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js";
+
+const params = new URLSearchParams(location.search);
+const width = Number(params.get("w")) || window.innerWidth;
+const height = Number(params.get("h")) || window.innerHeight;
+const layout = params.get("layout") || (width / height < 1.3 ? "square" : "wide");
+const still = params.has("still");
+
+const banner = document.querySelector(".banner");
+banner.classList.add(layout);
+banner.style.width = `${width}px`;
+banner.style.height = `${height}px`;
+const unit = Math.min(height / 100, width / 160);
+banner.style.setProperty("--unit", `${unit}px`);
+banner.style.setProperty("--edge", `${Math.round(unit * 6)}px`);
+banner.style.setProperty("--left", `${params.get("left") || Math.round(unit * 7.5)}px`);
+if (layout === "compact") {
+  document.querySelector(".headline").innerHTML =
+    'Local models. Hidden bugs.<br><span class="highlight">Verified fixes</span><span class="dot">.</span>';
+}
+
+const accent = new THREE.Color(0x28abe3);
+const canvas = document.querySelector("canvas");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: still });
+renderer.setPixelRatio(still ? 1 : Math.min(window.devicePixelRatio, 2));
+renderer.setSize(width, height, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+function studioEnvironment() {
+  const studio = new THREE.Scene();
+  studio.add(new THREE.Mesh(new THREE.BoxGeometry(40, 40, 40),
+    new THREE.MeshBasicMaterial({ color: 0x020305, side: THREE.BackSide })));
+  const origin = new THREE.Vector3();
+  const panel = (w, h, color, strength, position) => {
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color).multiplyScalar(strength), side: THREE.DoubleSide }));
+    mesh.position.copy(position);
+    mesh.lookAt(origin);
+    studio.add(mesh);
+  };
+  panel(14, 5, 0xffffff, 5, new THREE.Vector3(0, 16, 2));
+  panel(1.4, 18, 0x28abe3, 7, new THREE.Vector3(-15, 2, -4));
+  panel(1.2, 16, 0x0f98cb, 5, new THREE.Vector3(15, 1, -8));
+  panel(18, 0.8, 0xdfe8f0, 4, new THREE.Vector3(0, 3, -18));
+  panel(6, 6, 0x0a6e96, 2.5, new THREE.Vector3(8, -6, 12));
+  panel(3, 10, 0xffffff, 2.2, new THREE.Vector3(-6, 4, 14));
+  panel(16, 4, 0xdfe8f0, 1.6, new THREE.Vector3(0, 6, 16));
+  panel(10, 2, 0x28abe3, 1.4, new THREE.Vector3(2, -2, 16));
+  const generator = new THREE.PMREMGenerator(renderer);
+  const texture = generator.fromScene(studio, 0.035).texture;
+  generator.dispose();
+  return texture;
+}
+
+const background = new THREE.Color(0x05080c);
+const scene = new THREE.Scene();
+scene.background = background;
+scene.fog = new THREE.Fog(0x05080c, 12, 30);
+const environment = studioEnvironment();
+scene.environment = environment;
+
+const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
+camera.position.set(0, 1.4, 11);
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+keyLight.position.set(-4, 8, 3);
+scene.add(keyLight);
+const rimLight = new THREE.DirectionalLight(0x28abe3, 3);
+rimLight.position.set(5, 2, -6);
+scene.add(rimLight);
+
+const rig = new THREE.Group();
+scene.add(rig);
+
+const glow = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uColor: { value: accent } },
+  vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: "uniform vec3 uColor; varying vec2 vUv; void main() { float d = length(vUv - 0.5) * 2.0; float a = pow(max(0.0, 1.0 - d), 2.4) * 0.3; gl_FragColor = vec4(uColor * a, a); }",
+}));
+glow.position.set(0, 1.2, -8);
+rig.add(glow);
+
+const chrome = new THREE.MeshStandardMaterial({ color: 0xd6dde4, metalness: 1, roughness: 0.16 });
+const brushed = new THREE.MeshStandardMaterial({ color: 0xaeb8c2, metalness: 1, roughness: 0.34 });
+const dark = new THREE.MeshStandardMaterial({ color: 0x1a222b, metalness: 0.9, roughness: 0.45 });
+
+const SCALE = 0.07;
+const SHIELD_HEIGHT = 38 * SCALE;
+const point = (x, y) => [(x - 32) * SCALE, -(y - 32) * SCALE];
+function bar(from, to, radius, material, z) {
+  const [ax, ay] = point(...from);
+  const [bx, by] = point(...to);
+  const length = Math.hypot(bx - ax, by - ay);
+  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 12, 32), material);
+  mesh.position.set((ax + bx) / 2, (ay + by) / 2, z);
+  mesh.rotation.z = Math.atan2(by - ay, bx - ax) - Math.PI / 2;
+  return mesh;
+}
+function joint(at, radius, material, z) {
+  const [x, y] = point(...at);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 16), material);
+  mesh.position.set(x, y, z);
+  return mesh;
+}
+
+const polished = new THREE.MeshStandardMaterial({ color: 0xf2f5f8, metalness: 1, roughness: 0.07 });
+const light = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 2.4,
+  metalness: 0.2, roughness: 0.3 });
+const shell = new THREE.MeshStandardMaterial({ color: 0x2fb6ea, emissive: 0x0a5f86, emissiveIntensity: 0.6,
+  metalness: 0.75, roughness: 0.12 });
+
+const emblem = new THREE.Group();
+const corners = [
+  [[13, 25], [13, 14], [24, 14]],
+  [[51, 25], [51, 14], [40, 14]],
+  [[13, 39], [13, 50], [24, 50]],
+  [[51, 39], [51, 50], [40, 50]],
+];
+for (const [start, corner, finish] of corners) {
+  emblem.add(bar(start, corner, 0.1, polished, 0));
+  emblem.add(bar(corner, finish, 0.1, polished, 0));
+  emblem.add(joint(corner, 0.1, polished, 0));
+}
+for (const [from, to] of [[[32, 19], [32, 14]], [[20, 32], [15, 32]], [[49, 32], [44, 32]], [[32, 50], [32, 45]]]) {
+  emblem.add(bar(from, to, 0.065, light, 0.02));
+}
+const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.49, 0.28, 24, 64), shell);
+body.scale.z = 0.8;
+emblem.add(body);
+const seam = new THREE.MeshStandardMaterial({ color: 0x07131c, metalness: 0.4, roughness: 0.5 });
+emblem.add(bar([32, 23.6], [32, 40.4], 0.035, seam, 0.39));
+emblem.add(bar([25.8, 32], [38.2, 32], 0.035, seam, 0.37));
+const legs = [
+  [[25.6, 27], [21.5, 24]], [[25.2, 32], [20.5, 32]], [[25.6, 37], [21.5, 40]],
+  [[38.4, 27], [42.5, 24]], [[38.8, 32], [43.5, 32]], [[38.4, 37], [42.5, 40]],
+  [[29.5, 23.6], [27.5, 20.2]], [[34.5, 23.6], [36.5, 20.2]],
+];
+for (const [from, to] of legs) {
+  emblem.add(bar(from, to, 0.045, polished, 0));
+}
+
+const scanMaterial = new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.85,
+  blending: THREE.AdditiveBlending, depthWrite: false });
+const track = new THREE.Mesh(new THREE.TorusGeometry(1.95, 0.006, 8, 240),
+  new THREE.MeshBasicMaterial({ color: 0x3c5466, transparent: true, opacity: 0.6 }));
+emblem.add(track);
+const scan = new THREE.Mesh(new THREE.TorusGeometry(1.95, 0.014, 8, 120, Math.PI / 3.2), scanMaterial);
+emblem.add(scan);
+
+rig.add(emblem);
+
+const poolHeight = -1.4;
+const underGlow = new THREE.PointLight(0x28abe3, 8, 6, 1.6);
+underGlow.position.set(0, poolHeight + 0.35, 0);
+rig.add(underGlow);
+
+const reflectionTarget = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType });
+const reflectionCamera = new THREE.CubeCamera(0.1, 60, reflectionTarget);
+reflectionCamera.position.set(0, poolHeight, 0);
+rig.add(reflectionCamera);
+
+const shared = { uTime: { value: 0 } };
+const poolGeometry = new THREE.PlaneGeometry(40, 40, 320, 320);
+poolGeometry.rotateX(-Math.PI / 2);
+const poolMaterial = new THREE.MeshStandardMaterial({ color: 0xd6dde4, metalness: 1, roughness: 0.06,
+  envMap: reflectionTarget.texture, envMapIntensity: 1.25 });
+poolMaterial.onBeforeCompile = (shader) => {
+  shader.uniforms.uTime = shared.uTime;
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", `#include <common>
+      uniform float uTime;
+      float liquidHeight(vec2 p) {
+        float d = length(p);
+        float ripple = sin(d * 5.5 - uTime * 2.0) * 0.045 * exp(-d * 0.32) * smoothstep(0.0, 0.8, d);
+        float swell = sin(p.x * 0.55 + uTime * 0.45) * 0.06 + sin(p.y * 0.8 - uTime * 0.35) * 0.05
+          + sin((p.x - p.y) * 1.6 + uTime * 0.8) * 0.018;
+        return ripple + swell;
+      }
+      vec3 liquidNormal(vec2 p) {
+        float e = 0.04;
+        float hx = liquidHeight(p + vec2(e, 0.0)) - liquidHeight(p - vec2(e, 0.0));
+        float hz = liquidHeight(p + vec2(0.0, e)) - liquidHeight(p - vec2(0.0, e));
+        return normalize(vec3(-hx, 2.0 * e, -hz));
+      }`)
+    .replace("#include <beginnormal_vertex>", "vec3 objectNormal = liquidNormal(position.xz);")
+    .replace("#include <begin_vertex>", "vec3 transformed = vec3(position);\ntransformed.y += liquidHeight(position.xz);");
+};
+const pool = new THREE.Mesh(poolGeometry, poolMaterial);
+pool.position.y = poolHeight;
+rig.add(pool);
+
+const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+const visibleWidth = visibleHeight * camera.aspect;
+let emblemSize = 1.3;
+if (layout === "mark") {
+  rig.position.set(0, 0, 0);
+  rig.scale.setScalar(1);
+} else if (layout === "square") {
+  rig.position.set(0, visibleHeight * 0.13, 0);
+  rig.scale.setScalar(0.78);
+  emblemSize = 1.15;
+} else if (layout === "compact") {
+  rig.position.set(visibleWidth * 0.29, -0.15, 0);
+  rig.scale.setScalar(0.92);
+  emblemSize = 1.25;
+} else {
+  rig.position.set(visibleWidth * 0.27, 0, 0);
+  rig.scale.setScalar(Math.min(1, visibleWidth / 14));
+}
+let emblemHeight = 1.4 * emblemSize - 0.8;
+if (layout !== "square") {
+  const margin = { compact: 0.14, mark: 0.2 }[layout] ?? 0.13;
+  emblemSize = (visibleHeight * (1 - 2 * margin)) / (SHIELD_HEIGHT * rig.scale.x);
+  emblemHeight = (0.2 - rig.position.y) / rig.scale.x;
+  const waterLevel = emblemHeight - (SHIELD_HEIGHT / 2) * emblemSize - 0.25;
+  pool.position.y = waterLevel;
+  underGlow.position.y = waterLevel + 0.35;
+  reflectionCamera.position.y = waterLevel;
+}
+emblem.scale.setScalar(emblemSize);
+
+const pointer = { x: 0, y: 0 };
+const eased = { x: 0, y: 0 };
+if (!still) {
+  banner.addEventListener("pointermove", (event) => {
+    pointer.x = (event.clientX / width) * 2 - 1;
+    pointer.y = (event.clientY / height) * 2 - 1;
+  });
+  banner.addEventListener("pointerleave", () => { pointer.x = 0; pointer.y = 0; });
+}
+
+function render(time) {
+  shared.uTime.value = time;
+  eased.x += (pointer.x - eased.x) * 0.04;
+  eased.y += (pointer.y - eased.y) * 0.04;
+  underGlow.intensity = 7 + Math.sin(time * 0.9) * 1.5;
+  emblem.rotation.y = -0.3 + Math.sin(time * 0.25) * 0.12;
+  emblem.rotation.x = -0.05;
+  emblem.position.y = emblemHeight + Math.sin(time * 0.6) * 0.05;
+  scan.rotation.z = -time * 0.9;
+  camera.position.x = eased.x * 0.5;
+  camera.position.y = 1.4 - eased.y * 0.3;
+  camera.lookAt(rig.position.x * 0.2, rig.position.y + 0.2, 0);
+
+  pool.visible = false;
+  glow.visible = false;
+  scene.background = environment;
+  reflectionCamera.update(renderer, scene);
+  scene.background = background;
+  pool.visible = true;
+  glow.visible = true;
+  renderer.render(scene, camera);
+}
+
+if (still) {
+  render(4.2);
+  render(4.2);
+  document.body.dataset.ready = "true";
+} else {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const loop = () => {
+    render(performance.now() / 1000);
+    if (!reduced) requestAnimationFrame(loop);
+  };
+  loop();
+}
+</script>
+</body>
+</html>

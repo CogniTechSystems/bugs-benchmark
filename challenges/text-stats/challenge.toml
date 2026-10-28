@@ -1,0 +1,47 @@
+title = "Text Statistics"
+difficulty = "easy"
+language = "python"
+time_budget_seconds = 1800
+summary = "Word frequency, sentence and reading time statistics for English text."
+
+[[bugs]]
+key = "case-insensitive-words"
+title = "Words are not lower-cased before matching"
+file = "textstats/analysis.py"
+points = 1
+tests = [
+  "tests/test_analysis.py::test_words_are_lowercased",
+  "tests/test_analysis.py::test_word_frequencies_ignore_case",
+]
+original = '''
+    return WORD_PATTERN.findall(text)
+'''
+replacement = '''
+    return WORD_PATTERN.findall(text.lower())
+'''
+
+[[bugs]]
+key = "tie-order"
+title = "Ties in most_common are ordered reverse-alphabetically"
+file = "textstats/analysis.py"
+points = 1
+tests = ["tests/test_analysis.py::test_most_common_breaks_ties_alphabetically"]
+original = '''
+    ranked = sorted(frequencies.items(), key=lambda pair: (pair[1], pair[0]), reverse=True)
+'''
+replacement = '''
+    ranked = sorted(frequencies.items(), key=lambda pair: (-pair[1], pair[0]))
+'''
+
+[[bugs]]
+key = "reading-time-rounding"
+title = "Reading time rounds down instead of up"
+file = "textstats/analysis.py"
+points = 1
+tests = ["tests/test_analysis.py::test_reading_time_rounds_up_partial_minutes"]
+original = '''
+    return len(words(text)) // words_per_minute
+'''
+replacement = '''
+    return -(-len(words(text)) // words_per_minute)
+'''

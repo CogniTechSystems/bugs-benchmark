@@ -1,0 +1,57 @@
+title = "LRU Cache"
+difficulty = "medium"
+language = "python"
+time_budget_seconds = 2700
+summary = "A least-recently-used cache with time-to-live expiry and a memoisation decorator."
+
+[[bugs]]
+key = "get-recency"
+title = "A cache hit does not refresh the entry's recency"
+file = "cachekit/lru.py"
+points = 2
+tests = [
+    "tests/test_cache.py::test_get_marks_entry_as_recently_used",
+    "tests/test_cachekit.py::test_namespace_get_marks_entry_as_recently_used",
+]
+original = '''
+        self.hits += 1
+        return value
+'''
+replacement = '''
+        self._entries.move_to_end(key)
+        self.hits += 1
+        return value
+'''
+
+[[bugs]]
+key = "eviction-order"
+title = "Eviction removes the most recently inserted entry"
+file = "cachekit/lru.py"
+points = 2
+tests = [
+    "tests/test_cache.py::test_eviction_removes_least_recently_used_entry",
+    "tests/test_cachekit.py::test_capacity_eviction_reports_least_recently_used_key",
+    "tests/test_cachekit.py::test_resize_evicts_least_recently_used_entries",
+]
+original = '''
+            evicted_key, (evicted_value, _) = self._entries.popitem(last=True)
+'''
+replacement = '''
+            evicted_key, (evicted_value, _) = self._entries.popitem(last=False)
+'''
+
+[[bugs]]
+key = "ttl-boundary"
+title = "Entries survive for one instant past their time to live"
+file = "cachekit/lru.py"
+points = 2
+tests = [
+    "tests/test_cache.py::test_entry_expires_once_ttl_has_elapsed",
+    "tests/test_cachekit.py::test_ttl_remaining_is_none_once_ttl_has_elapsed",
+]
+original = '''
+        return self._ttl is not None and self._clock() - stored_at > self._ttl
+'''
+replacement = '''
+        return self._ttl is not None and self._clock() - stored_at >= self._ttl
+'''

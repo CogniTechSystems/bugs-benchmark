@@ -1,0 +1,44 @@
+title = "Expression Calculator"
+difficulty = "hard"
+language = "python"
+time_budget_seconds = 3600
+summary = "A tokenizer and recursive descent evaluator for arithmetic expressions."
+
+[[bugs]]
+key = "multiplicative-associativity"
+title = "Multiplicative operators associate to the right"
+file = "calc/parser.py"
+points = 3
+tests = ["tests/test_evaluate.py::test_multiplicative_operators_are_left_associative"]
+original = '''
+            right = self._term()
+'''
+replacement = '''
+            right = self._unary()
+'''
+
+[[bugs]]
+key = "exponent-operand"
+title = "Exponentiation is left-associative and rejects a negated exponent"
+file = "calc/parser.py"
+points = 3
+tests = ["tests/test_evaluate.py::test_exponent_is_right_associative_and_accepts_unary_minus"]
+original = '''
+            value = BinaryOp("^", value, self._primary(), operator.position)
+'''
+replacement = '''
+            value = BinaryOp("^", value, self._unary(), operator.position)
+'''
+
+[[bugs]]
+key = "remainder-sign"
+title = "Remainder uses floored modulo instead of truncated remainder"
+file = "calc/evaluator.py"
+points = 3
+tests = ["tests/test_evaluate.py::test_remainder_takes_sign_of_dividend"]
+original = '''
+    return left % right
+'''
+replacement = '''
+    return math.fmod(left, right)
+'''
